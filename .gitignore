@@ -1,0 +1,10 @@
+#ignore data input files
+*.txt
+
+#ignore dev's gmon.out file
+*.out
+
+#ingore *.exe files
+*.exe
+
+offers/
