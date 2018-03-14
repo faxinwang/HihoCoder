@@ -11,6 +11,10 @@
         "utility": "cpp",
         "iostream": "cpp",
         "system_error": "cpp",
-        "xlocale": "cpp"
+        "xlocale": "cpp",
+        "initializer_list": "cpp",
+        "list": "cpp",
+        "xtree": "cpp",
+        "xutility": "cpp"
     }
 }
