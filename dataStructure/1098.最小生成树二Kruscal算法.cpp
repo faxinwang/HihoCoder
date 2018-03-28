@@ -81,6 +81,7 @@ ELog(E).
 #include<iostream>
 #include<cstdio>
 #include<queue>
+#include<functional> // greater<>, also included in algorithm,iostream,etc.
 using namespace std;
 const int maxn = 1e5+5;
 
@@ -98,7 +99,7 @@ struct Edge
     //使用小根堆，需要重载大于号
     bool operator>(const Edge& e)const{ return w > e.w ; }
 };
-priority_queue<Edge, vector<Edge>, greater<Edge> > Q; 
+priority_queue<Edge, deque<Edge>, greater<Edge> > Q; 
 int p[maxn]; //并查集
 
 int Find(int x)
