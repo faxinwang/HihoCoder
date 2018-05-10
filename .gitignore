@@ -8,3 +8,5 @@
 *.exe
 
 offers/
+
+test.cpp
