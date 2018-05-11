@@ -209,6 +209,7 @@ bool isPrime(LL n)
     return true;
 }
 
+
 int main()
 {
     #ifdef WFX
@@ -220,7 +221,7 @@ int main()
     while(T--)
     {
         cin>>n;
-        printf("%s\n", isPrime(n)?"Yes":"No");
+        printf("%lld %s %s\n",n, isPrime(n)?"Yes":"No");
     }
 
     return 0;
