@@ -190,7 +190,7 @@ bool miller_rabin(LL a, LL n)
     while( s&1 == 0){ s >>= 1; ++r;}
     LL x = pow_mod(a, s, n);
     if(x == 1) return true; //possibily true
-    for(LL j=0; j<r; ++j, x = x*x % n)
+    for(LL j=0; j<r; ++j, x = mul_mod(x,x,n))
         if(x == n-1) return true;
     return false;
 }
@@ -221,7 +221,7 @@ int main()
     while(T--)
     {
         cin>>n;
-        printf("%lld %s %s\n",n, isPrime(n)?"Yes":"No");
+        printf("%s\n",n, isPrime(n)?"Yes":"No");
     }
 
     return 0;

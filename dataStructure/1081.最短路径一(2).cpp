@@ -17,7 +17,7 @@
 第1行为4个整数N、M、S、T，分别表示鬼屋中地点的个数和道路的条数，入口（也是一个地点）的编号，出口（同样也是一个地点）的编号。
 接下来的M行，每行描述一条道路：其中的第i行为三个整数u_i, v_i, length_i，表明在编号为u_i的地点和编号为v_i的地点之间有一条
 长度为length_i的道路。
-对于100%的数据，满足N<=10^3，M<=10^4, 1 <= length_i <= 10^3, 1 <= S, T <= V, 且S不等于T。
+对于100%的数据，满足N<=10^3，M<=10^4, 1 <= length_i <= 10^3, 1 <= S, T <= N, 且S不等于T。
 对于100%的数据，满足小Hi和小Ho总是有办法从入口通过地图上标注出来的道路到达出口。
 
 输出
@@ -53,57 +53,62 @@
 123
 
 解题思路：
-哎，好久没写dijkstra，都忘了在通过中间结点u更新其他结点时，只能更新与结点u直接相连的结点v，并且
-v不在集合s中。重新整理一下dijkstra算法的思想：
-dijkstra算法主要用于求单源最短路径，即从具有N个结点的图中的某一点S到其他任意点T的最短路径.
-算法的过程如下：
-用数组d[i]记录S到i的最短距离，p[i]记录S到i的最短路径上i的前驱结点。
-初始时d[i]为S到i的边的距离，如果S到i没有直接相连的边，则初始距离设为一个足够大的正数INF。
-过程中需要维护一个集合S,处于集合S中的点到S的最短距离都已经确定。
-算法每次从S集合之外找一个离S点距离最近的点u，即 s[u]==0 && d[u] = min{d[k]},k=1,2,,,,N。
-将u加入集合S，然后用S到u的最短距离更新所有与u直接相连的结点到S的距离：
-for v connected to u: d[v] = min(d[v], d[u] + g[u][v])
-重复该过程直到所有结点都加入到集合s中为止。
+在链接矩阵实现的dijkstra算法中, 外层循环用于固化所有V个顶点. 内层循环中,有一个O(V)的内层循
+环用于寻找离源点距离最小的待松弛的顶点u, 还有一个O(V)的内层循环用于松弛所有与u相邻的顶点v.
 
-需要注意的是, 如果图中存在权值为负数的边, dijkstra算法就无法解决, 这时候需要使用
-Bellman-Ford算法.
+如果dijkstra算法用链接表实现, 则内层循环中用于进行松弛操作的循环可以变得的很小( O(G[u].size()) ), 
+但因为内层循环中还有一个O(V)的循环用于寻找离源点距离最小的待松弛的顶点.故总时间复杂度还是O(V^2)
+
+我们可以用堆优化从内层循环中寻找离源点距离最小的顶点的过程, 每次从堆中取出离源点距离最小的元素后, 如果该点
+到源点的距离没有被松弛过, 则该点没有利用价值, 可以直接抛弃, 如果该点到源点的距离被松弛过, 则与该点相连的点
+到源点的距离可能因为该点而变得更小. 因此需要将该点加入到堆中. 这样, 堆中元素的数目为O(V), 从堆中取出和插入
+元素的次数为O(E), 因此总的时间复杂度降到了O(E log V), 算法变得非常高效了.
+
+使用堆优化的dijkstra算法依然无法处理存在负权边的图.
 */
+
 
 #include<iostream>
 #include<cstdio>
-#include<cstring>
+#include<queue>
+#include<vector>
+#include<algorithm>
 using namespace std;
 const int maxn = 1e3+5;
 const int INF = 1<<30;
-int g[maxn][maxn];      
-int s[maxn];
+
+typedef pair<int,int> Pair; //first保存到源点的距离, second保存顶点的编号
+struct Edge
+{
+    int to, cost; 
+    Edge(int t=0,int c=0):to(t),cost(c){}
+};
+
+vector<Edge> G[maxn];
 int d[maxn];
 // int p[maxn]; //记录前驱结点
 int V,E,S,T;
 
-//时间复杂度O(V^2)
-void dijkstra()
+//时间复杂度O(V log (E))
+void opt_dijkstra()
 {
-    for(int i=1; i<=V; ++i) d[i] = (g[S][i]? g[S][i] : INF);
+    fill(d, d + V + 1, INF);
+    priority_queue<Pair,vector<Pair>, greater<Pair> > Q;
     d[S] = 0;
-    s[S] = 1;
-    for(int i=1; i<=V; ++i)
+    Q.push(Pair(0,S)); //将源点和其最短距离放进优先队列
+    while(!Q.empty())
     {
-        int _min = INF,u;
-        for(int j=1; j<=V; ++j)
+        Pair p = Q.top(); Q.pop();
+        int u = p.second;
+        if(d[u] < p.first) continue;
+        for(int i=0, n=G[u].size(); i<n; ++i)
         {
-            if(!s[j] && d[j] < _min) _min = d[ u = j ];
-        }
-        if( d[u] == INF) break; //说明从起点S无法到达点u
-        s[u] = 1; //将u放入结合s
-        for(int v=1; v<=V; ++v)
-        {
-            //通过S到u的最短距离更新所有与u相连的结点到S的最短距离
-            if(!s[v] && g[u][v] != INF)
+            Edge &e = G[u][i];
+            if(d[e.to] > d[u] + e.cost)
             {
-                d[v] = min(d[u] + g[u][v], d[v]);
-                // p[v] = u; //在从S到T的最短路径上，v的前驱结点是u
-            } 
+                d[e.to] = d[u] + e.cost;
+                Q.push(Pair(d[e.to], e.to));
+            }
         }
     }
 }
@@ -117,13 +122,13 @@ freopen("in.txt","r",stdin);
     scanf("%d%d%d%d",&V,&E,&S,&T );
     //注意这看似是有向图，但其实是个无向图，虽然两个点之间可能有多条不同的边相连，
     //但每条路都是可以从一端到达另一端的。
-    for(int i=1;i<=E; ++i)
+    for(int i=1; i<=E; ++i)
     {
         scanf("%d%d%d",&u,&v,&w);
-        if(g[u][v] == 0) g[u][v] = g[v][u] = w;
-        else g[u][v] = g[v][u] = min(g[u][v] , w);
+        G[u].push_back(Edge(v,w));
+        G[v].push_back(Edge(u,w));
     }
-    dijkstra();
+    opt_dijkstra();
     printf("%d\n", d[T]);
 
     return 0;
