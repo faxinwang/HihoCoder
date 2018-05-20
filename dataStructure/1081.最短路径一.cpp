@@ -78,6 +78,7 @@ const int INF = 1<<30;
 int g[maxn][maxn];      
 int s[maxn];
 int d[maxn];
+
 // int p[maxn]; //记录前驱结点
 int V,E,S,T;
 

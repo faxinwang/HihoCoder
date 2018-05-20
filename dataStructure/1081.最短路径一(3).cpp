@@ -53,7 +53,9 @@
 123
 
 解题思路:
-这里使用了bellman_ford算法, 但是输出结果为280, 不是很懂.
+这里使用了bellman_ford算法, 当两个顶点之间存在多条边时, 根据题目只能保留权值最小
+或者最大的边, 否则bellman_ford算法无法得到正确的结果. 这样的话, 还需要花费O(V^2)
+的时间选出去重后的边.
 */
 
 #include<iostream>
@@ -67,6 +69,8 @@ const int MAXE = 1e4+5;
 const int INF = 1<<30;
 
 struct Edge{ int from, to, cost; };
+
+int g[MAXV][MAXV];
 
 Edge edg[MAXE];
 int d[MAXV];
@@ -106,9 +110,31 @@ freopen("in.txt","r",stdin);
 
     //注意这看似是有向图，但其实是个无向图，虽然两个点之间可能有多条不同的边相连，
     //但每条路都是可以从一端到达另一端的。
+    int u,v,w;
     scanf("%d%d%d%d",&V,&E,&S,&T );
-    for(int i=0; i<E; ++i) 
-        scanf("%d%d%d",&edg[i].from,&edg[i].to,&edg[i].cost);
+    for(int i=0; i<E; ++i)
+    {
+        scanf("%d%d%d",&u,&v,&w);
+        if(g[u][v] == 0) g[u][v] = g[v][u] = w;
+        else g[u][v] = g[v][u] = min(g[u][v], w); //g[u][v]只保存距离最短的边的距离
+    }
+    
+    //选出所有去重后的边, 注意i,j都要重第一个编号开始.
+    E = 0;
+    for(int i=1; i<=V; ++i)
+    {
+        for(int j=1; j<=V; ++j)
+        {
+            if(g[i][j])
+            {
+                edg[E].from = i;
+                edg[E].to = j;
+                edg[E].cost = g[i][j];
+                ++E;
+            }
+        }
+    }
+
     bellman_ford();
     printf("%d\n", d[T]);
 

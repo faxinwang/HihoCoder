@@ -125,7 +125,7 @@ xor (a[i][1] * x[1]) xor (a[i][2] * x[2]) xor ... xor (a[ i][30] * x[30])
 using namespace std;
 const int N = 35;
 
-int a[N][N]; //系数矩阵 a[i][j]=1表示按下等i会改变灯j的状态
+int a[N][N]; //系数矩阵 a[i][j]=1表示按下灯i会改变灯j的状态
 
 void show()
 {
