@@ -72,8 +72,10 @@ using namespace std;
 
 int a[maxn][maxn];
 
-int dp(int n){
-    for(int i=n-1; i>=1; --i){
+int dp(int n)
+{
+    for(int i=n-1; i>=1; --i)
+    {
         for(int j=0; j<i; ++j) a[i][j] += max(a[i+1][j], a[i+1][j+1]);
     }
     return a[1][0];

@@ -38,26 +38,37 @@
 201
 
 解题思路:
-dp(i,S)表示前i个位置，(i-m+1)到i这些位置是否被打扫如S集合中所表示的那样时，可以打扫的最多垃圾数。
-状态转移：
-当i位置被选中时，dp(i,S) = max(dp(i-1,S-{i被选中否} +{i-m被选中}),  dp(i-1,S-{i被选中否} +{i-m未被选中}) ) + w(i)
-当i位置未被选中时，dp(i,S) = max(dp(i-1,S-{i被选中否} + {i-m被选中}),  dp(i-1,S-{i被选中否} + {i-m未被选中}) )
+dp[i][j]: j是一个二进制状态,表示第i个元素和i前面的M-1个元素选择的信息, dp[i][j]表示在j的状态下子问题为i
+的一个解,即前i个元素在题目的限制条件下,得到的一个解. 那么答案就是dp[N][j]中最大的一个.(这里的j是
+一个状态集合, 表示所有合法的状态).
 
-我们用dp[i][j]表示在第i个位置上，j是一个二进制状态，表示包括当前位置的前M-1个位置上的数是否被选取。
-例如j=10101表示第1,3,5个位置选择，2,4位置不选。
-那么dp[i][s] = max( dp[i-1][last]+w[i] , dp[i][s] ),我们枚举可行的last,并判断last中含有1的个数，
-如果last中含有q个1，第i个位置只能不选了；否则既可以不选也可以选。
+这里j从最右边开始的第1位表示当前第i个元素的选择状态,1为选择,0为不选择.
+j从最右边开始的第2位表示第i个元素前面一个元素的选择状态, 依次类推.
+
+现在假设d[i-1][j]都已经计算出来了, 那么如何计算d[i][j]呢.
+这就要看d[i-1][j]中的j里面已经选择的元素的个数, 如果已经选择了Q个, 则当前第i个元素只能不选.
+dp[i][next] = dp[i-1][j]. (next是由dp[i-1][j]中的状态j转移过来的,具体看代码)
+
+如果前面选择的没有超过Q个, 则当前第i个元素可以选择也可以不选.不选的话,状态转移方程和上面的一样,
+选择的话,有
+dp[i][next|1] = max(dp[i][next|1], dp[i-1][j] + w[i])
 */
 
 #include<iostream>
 #include<cstdio>
+#include<algorithm>
 using namespace std;
+
 const int maxn = 1005;
 int N,M,Q;
 int dp[maxn][1<<10]; // dp[i][j]表示从前i个位置，在状态j所表示的状态中所能打扫垃圾的最大数目
-int w[maxn];
+int w[maxn];  //要选择的序列
+int state[1<<10]; //保存所有的合法状态(决策信息)
+int num[1<<10]; //num[i]记录状态i里面1的个数
+int S = 0; //记录可行状态的数量
 
-int num(int x){
+//计算状态x里面选则的位置的个数,1表示选择了,0表示没有选
+int count(int x){
     int cnt = 0;
     while(x){
         cnt += x&1;
@@ -66,36 +77,57 @@ int num(int x){
     return cnt;
 }
 
+//计算出所有可行的状态,连续m个位置中选择的个数不能超过Q个.
+void init_states()
+{
+    for(int s=0, n=1<<(M-1); s<n; ++s)
+    {
+        int t = count(s);
+        if(t > Q) continue; //连续M-1位里面1的个数超过了Q个, 不合法
+        state[S++] = s;
+        num[s] = t; //记录状态s里面的1的个数为t
+    }
+}
+
 int main(){
 #ifdef WFX
 freopen("in.txt","r",stdin);
 #endif
+
     scanf("%d%d%d",&N,&M,&Q);
     for(int i=1; i<=N; ++i) scanf("%d",w+i);
-    if(M == Q){
+    if(M == Q){ //每连续M个里面可以选择M个, 所以所有元素都选择时结果最大.
         int ans = 0;
         for(int i=1; i<=N; ++i) ans += w[i];
         printf("%d\n",ans);
     }
     else{
-        int add = 1<<(M-1);
-        int ans = 0;
-        for(int i=1; i<=N; ++i)
+        init_states();
+        int all=(1<<(M-1))-1; //低位连续M-1个1
+        for(int i=1; i<=N; ++i)//从第一个元素开始, 枚举该元素选和不选两种状态.
         {
-            //枚举前M个位置的状态，当i<m时，就只能枚举前i个位置了
-            for(int j=0,n=(1<<min(i,M)); j<=n; ++j)
-            {
-                if(num(j) > Q) continue;
-                if( ~j & 1)//判断j这个状态是否包含了i位置   
-                    dp[i][j] = max(dp[i-1][j>>1], dp[i-1][ (j>>1) + add] );
-                else
-                    dp[i][j] = max(dp[i-1][j>>1], dp[i-1][ (j>>1) + add] ) + w[i];
+            //枚举所有合法的状态,每个状态里面保存了前面M-1个元素有没有选择的信息
+            //如果前面的M-1个元素里面已经选择了Q个元素, 则当前元素不能选择,否则可以选择
+            //任何状态下, 当前元素都可以不选择
+            for(int j=0; j<S; ++j)
+            {   
+                int s = state[j];
+                int next = (s<<1) & all; //新的状态
+                //如果当前元素可以选择, 则计算在选择该元素的决策下能得到的最优解
+                //状态next|1 表示选择的元素中加入了第i个元素
+                //next|1之前可能已经计算过,所以更新的时候要取已有值与新计算得到的一个解中的较大者
+                if(num[s] < Q) dp[i][next|1] = max(dp[i][next|1], dp[i-1][s] + w[i] );
+                
+                //计算在不选择当前元素的决策下能得到的最优解, 为前i-1个元素在所有决策中的最优解.
+                dp[i][next] = max(dp[i][next], dp[i-1][s]); 
             }
         }
-        for(int i=0,n=(1<<min(M,N)); i<=n; ++i) ans = max(ans, dp[N][i]);
+        
+        int ans = 0;
+        for(int j=0; j<S; ++j) ans = max(ans, dp[N][state[j]]);
+
         printf("%d\n",ans);
     }
-
 
     return 0;
 }

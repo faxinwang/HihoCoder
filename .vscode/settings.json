@@ -21,6 +21,8 @@
         "type_traits": "cpp",
         "functional": "cpp",
         "sstream": "cpp",
-        "ostream": "cpp"
+        "ostream": "cpp",
+        "algorithm": "cpp",
+        "limits": "cpp"
     }
 }
