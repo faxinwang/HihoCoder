@@ -50,6 +50,7 @@
 
 #include<iostream>
 #include<cstdio>
+#include<algorithm>
 using namespace std;
 const int maxn = 1e6+5;
 const int INF = 1<<30;
@@ -62,42 +63,51 @@ struct Node
 struct SegTree
 {
     Node a[maxn<<2];
-    void build(int rt,int L,int R)
+    inline int Mid(int L,int R){  return L + ( R-  L)/2; }
+    inline int Mid(int rt) { return a[rt].L + (a[rt].R - a[rt].L)/2; }
+    inline int Len(int rt) { return a[rt].R - a[rt].L + 1; }
+
+    void build(int L, int R, int rt=1)
     {
         a[rt].L = L;
         a[rt].R = R;
         a[rt].Min = INF;
-        if(L == R) return ;
-        int mid = L + (R - L )/2;
-        build(rt<<1, L, mid);
-        build(rt<<1|1, mid+1, R);
+        if(L == R)
+        {
+            scanf("%d", &a[rt].Min);
+            return ;
+        } 
+        int mid = Mid(L,R);
+        build( L, mid, rt<<1);
+        build( mid+1, R, rt<<1|1);
+        push_up(rt);
     }
 
-    void pushup(int rt){ a[rt].Min = min( a[rt<<1].Min, a[rt<<1|1].Min ); }
+    inline void push_up(int rt){ a[rt].Min = min( a[rt<<1].Min, a[rt<<1|1].Min ); }
 
-    void insert(int rt,int pos,int val)
+    void insert(int pos,int val ,int rt=1)
     {
         if( a[rt].L == a[rt].R ){
             a[rt].Min = val;
         }
         else
         {
-            int mid = a[rt].L + (a[rt].R - a[rt].L) / 2;
-            if(pos <= mid) insert(rt<<1, pos, val);
-            else insert(rt<<1|1, pos, val);
-            pushup(rt);
+            int mid = Mid(rt);
+            if(pos <= mid) insert(pos, val, rt<<1);
+            else insert(pos, val, rt<<1|1);
+            push_up(rt);
         }
     }
 
-    int query(int rt,int L,int R)
+    int query(int L,int R,int rt=1)
     {
-        if(a[rt].L ==L && a[rt].R == R) return a[rt].Min;
-        int mid = (a[rt].L + a[rt].R)/2;
-        if(R <= mid) return query(rt<<1, L,R);
-        else if(mid < L) return query(rt<<1|1, L, R);
-        else return min( query(rt<<1, L,mid), query(rt<<1|1, mid+1, R));
+        if(L <= a[rt].L && a[rt].R <= R) return a[rt].Min;
+        int mid = Mid(rt);
+        if(R <= mid) return query(L, R, rt<<1);
+        else if(mid < L) return query(L, R, rt<<1|1);
+        else return min( query(L, R, rt<<1), query(L, R, rt<<1|1));
     }
-};
+}tree;
 
 int main()
 {
@@ -106,21 +116,15 @@ freopen("in.txt","r",stdin);
 #endif
     int N,M;
     int op,x,y;
-    //不能直接声明为对象，否则会爆栈，因为对象里面开了大数组
-    SegTree * tree = new SegTree;
     scanf("%d",&N);
-    tree->build(1,1,N);
-    for(int i=1; i<=N; ++i)
-    {
-        scanf("%d", &x);
-        tree->insert(1,i,x);
-    }
+    tree.build(1,N);
+
     scanf("%d",&M);
     while(M--)
     {
         scanf("%d%d%d",&op,&x,&y);
-        if( op==1 ) tree->insert(1,x,y);
-        else printf("%d\n", tree->query(1,x,y));
+        if( op==1 ) tree.insert(x,y);
+        else printf("%d\n", tree.query(x,y));
     }
 
     return 0;

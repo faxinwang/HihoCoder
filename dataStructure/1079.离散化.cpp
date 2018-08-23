@@ -80,46 +80,48 @@ pair<int,int> poster[maxn]; //保存海报原始区间
 
 struct Node
 {
-    int L, R, sum; //sum表示这段区间中被覆盖的长度
+    int L, R, sum; //sum表示这段区间中被覆盖的长度, 连续区间[L,R)
     bool asyn; //懒惰标记
 };
 
 struct SegTree
 {
     Node a[maxn<<2];
-    int Mid(int rt) { return a[rt].L + (a[rt].R - a[rt].L)/2; }
+    inline int Mid(int rt) { return a[rt].L + (a[rt].R - a[rt].L)/2; }
+    inline int Mid(int L, int R) { return (L+R)/2; }
+    inline int Len(int rt) { return a[rt].R - a[rt].L; } // 连续区间的长度等于右端点的值减去左端点的值
     
     //这次建立的是连续区间,注意连续区间和离散区间之间的区别
-    void build(int rt,int L, int R)
+    void build(int L, int R, int rt=1)
     {
         a[rt].L = L;
         a[rt].R = R;
         a[rt].sum = 0;
         a[rt].asyn = 0;
         if(L + 1 == R) return ;
-        int mid = L + (R - L)/2;
-        build(rt<<1, L, mid);
-        build(rt<<1|1, mid, R);
+        int mid =Mid(L, R);
+        build(L, mid, rt<<1);
+        build(mid, R, rt<<1|1); //右子区间从mid开始而不是mid+1开始
     }
 
     void push_up(int rt){ a[rt].sum = a[rt<<1].sum + a[rt<<1|1].sum; }
 
-    void insert(int rt, int L, int R, int val = 1)
+    void update(int L, int R, int val, int rt = 1)
     {
         if(a[rt].asyn) push_down(rt);
-        if(a[rt].L == L && a[rt].R == R)
+        if( L <= a[rt].L && a[rt].R <= R )
         {
-            a[rt].sum = (R - L) * val;
+            a[rt].sum = Len(rt) * val;
             a[rt].asyn = 1;
             return;
         }
         int mid = Mid(rt);
-        if( R <= mid ) insert(rt<<1, L, R, val);
-        else if(mid <= L) insert(rt<<1|1, L, R, val);
+        if( R <= mid ) update(L, R, val, rt<<1);
+        else if(mid <= L) update(L, R, val, rt<<1|1);
         else
         {
-            insert(rt<<1, L, mid,val);
-            insert(rt<<1|1, mid, R, val);
+            update(L, R, val, rt<<1);
+            update(L, R, val, rt<<1|1);
         }
         push_up(rt);
     }
@@ -128,21 +130,20 @@ struct SegTree
     {
         if(a[rt].L +1 == a[rt].R) return; //叶子结点
         int lc = rt<<1, rc = lc+1;
-        a[lc].asyn = 1;
-        a[lc].sum = a[lc].R - a[lc].L;
-        a[rc].asyn = 1;
-        a[rc].sum = a[rc].R - a[rc].L;
+        a[lc].asyn = a[rc].asyn = 1;
+        a[lc].sum = Len(lc);
+        a[rc].sum = Len(rc);
         a[rt].asyn = 0;
     }
 
-    int query(int rt, int L, int R)
+    int query(int L, int R, int rt=1)
     {
         if(a[rt].asyn) push_down(rt);
-        if(a[rt].L == L && a[rt].R == R) return a[rt].sum;
+        if(L <= a[rt].L&& a[rt].R <= R) return a[rt].sum;
         int mid = Mid(rt);
-        if(R <= mid) return query(rt<<1, L, R);
-        else if(mid <= L) return query(rt<<1|1, L, R);
-        else return query(rt<<1, L, mid) + query(rt<<1|1, mid, R);
+        if(R <= mid) return query(L, R, rt<<1);
+        else if(mid <= L) return query(L, R, rt<<1|1);
+        else return query(L, R, rt<<1) + query(L, R, rt<<1|1);
     }
 
 }tree;
@@ -168,19 +169,19 @@ freopen("in.txt","r",stdin);
     for(; pos != st.end(); ++pos) mp[*pos] = ++idx;
 
     //用离散化之后的数据建立线段树
-    tree.build(1, 0, idx);
+    tree.build(0, idx);
     //逆向插入，如果当前海报的区间没有全部覆盖，则该张海报最终将是可见的。
     int ans = 0;
     for(int i=N-1; i>=0; --i)
     {
-        int L = mp[poster[i].first];
+        int L = mp[poster[i].first]; //海报的长度也是一段连续区间
         int R = mp[poster[i].second];
-        int sum = tree.query(1, L, R);
+        int sum = tree.query(L, R);
         // printf("L=%d R=%d sum=%d\n", L, R, sum);
         if( sum < (R - L) ) //没有完全覆盖
         {
             ++ans; 
-            tree.insert(1, L, R); //val 使用默认值1
+            tree.update(L, R, 1);
         }
     }
     printf("%d\n", ans);

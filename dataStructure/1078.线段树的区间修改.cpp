@@ -58,7 +58,7 @@ const int maxn = 1e5+5;
 struct Node
 {
     int L, R, val, sum;
-    bool lazy_asyn;  //向下同步标记，1表示需要向下同步，0表示不需要向下同步
+    int lazy_set; //向下同步标记
 };
 
 struct SegTree
@@ -66,44 +66,50 @@ struct SegTree
     Node a[maxn<<2];
 
     //获取区间中值
-    int Mid(int rt){ return a[rt].L + (a[rt].R - a[rt].L ) / 2; }
-    int Mid(int L, int R){ return L + (R- L)/2; }
+    inline int Mid(int rt){ return a[rt].L + (a[rt].R - a[rt].L ) / 2; }
+    inline int Mid(int L, int R){ return L + (R- L)/2; }
+    inline int Len(int rt){ return a[rt].R - a[rt].L + 1; }
 
     //建立线段树
-    void build(int rt, int L,int R)
+    void build(int L, int R, int rt=1)
     {
         a[rt].L = L;
         a[rt].R = R;
-        a[rt].sum = 0;
-        a[rt].lazy_asyn = 0;
-        if(L == R) return ;
+        a[rt].sum = a[rt].lazy_set = a[rt].val= 0;
+        if(L == R)
+        {
+            scanf("%d",&a[rt].val);
+            a[rt].sum = a[rt].val;
+            return ;
+        } 
         int mid = Mid(L,R);
-        build(rt<<1, L, mid);
-        build(rt<<1|1, mid+1, R);
+        build(L, mid, rt<<1);
+        build(mid+1, R, rt<<1|1);
+        push_up(rt);
     }
 
-    void push_up(int rt){ a[rt].sum = a[rt<<1].sum + a[rt<<1|1].sum;  }
+    inline void push_up(int rt){ a[rt].sum = a[rt<<1].sum + a[rt<<1|1].sum;  }
     
     //将区间[L,R]的值修改为val.
     //向上走的时候，如果遇到了懒惰标记，要将懒惰标记向下传递，否则会出现修改错误
     //回溯的时候，要将更新的信息向上同步
-    void insert(int rt,int L, int R, int val)
+    void insert(int L, int R, int val, int rt=1)
     {
-        if(a[rt].lazy_asyn) push_down(rt);
-        if(a[rt].L == L && a[rt].R == R)
+        if(a[rt].lazy_set) push_down(rt);
+        if(L <= a[rt].L  && a[rt].R <= R)
         {
             a[rt].val = val;
-            a[rt].sum = (R - L + 1) * val;
-            a[rt].lazy_asyn = 1;
+            a[rt].sum = Len(rt) * val;
+            a[rt].lazy_set = val;
             return;
         }
         int mid = Mid(rt);
-        if(R <= mid) insert(rt<<1, L, R, val);
-        else if(mid < L) insert(rt<<1|1, L, R, val);
+        if(R <= mid) insert(L, R, val, rt<<1);
+        else if(mid < L) insert(L, R, val, rt<<1|1);
         else 
         {
-            insert(rt<<1, L, mid, val);
-            insert(rt<<1|1, mid+1, R, val);
+            insert(L, R, val ,rt<<1);
+            insert(L, R, val, rt<<1|1);
         }
         push_up(rt);
     }
@@ -113,23 +119,22 @@ struct SegTree
     {
         if(a[rt].L == a[rt].R) return; //已经到达叶子结点，不需要往下同步
         int lc = rt<<1, rc=lc+1;
-        a[lc].val = a[rt].val;
-        a[lc].sum = (a[lc].R - a[lc].L + 1) * a[lc].val;
-        a[rc].val = a[rt].val;
-        a[rc].sum = (a[rc].R - a[rc].L + 1) * a[rc].val;
-        a[rt].lazy_asyn = 0;
-        a[lc].lazy_asyn = a[rc].lazy_asyn = 1; 
+        a[lc].val = a[lc].lazy_set = a[rt].lazy_set; //set标记向下传递
+        a[rc].val = a[rc].lazy_set = a[rt].lazy_set;
+        a[lc].sum = Len(lc) * a[rt].val;
+        a[rc].sum = Len(rc) * a[rt].val;
+        a[rt].lazy_set = 0;
     }
 
     //区间查询
-    int query(int rt, int L, int R)
+    int query(int L, int R, int rt=1)
     {
-        if(a[rt].lazy_asyn) push_down(rt);
-        if(a[rt].L == L && a[rt].R == R) return a[rt].sum;
+        if(a[rt].lazy_set) push_down(rt);
+        if(L <= a[rt].L && a[rt].R <= R) return a[rt].sum;
         int mid = Mid(rt);
-        if(R <= mid) return query(rt<<1, L, R);
-        else if(mid < L) return query(rt<<1|1, L, R);
-        else return query(rt<<1, L, mid) + query(rt<<1|1, mid+1, R);
+        if(R <= mid) return query(L, R, rt<<1);
+        else if(mid < L) return query(L, R, rt<<1|1);
+        else return query(L, R, rt<<1) + query(L, R, rt<<1|1);
     }
 
     void dfs(int rt)
@@ -153,13 +158,7 @@ freopen("in.txt","r",stdin);
     int N, Q, val;
     int op, x, y;
     scanf("%d",&N);
-    tree.build(1, 1, N);
-
-    for(int i=1; i<=N; ++i)
-    {
-        scanf("%d",&val);
-        tree.insert(1, i, i, val);
-    }
+    tree.build(1, N);
 
     scanf("%d",&Q);
     while(Q--)
@@ -168,12 +167,12 @@ freopen("in.txt","r",stdin);
         if(op == 1)
         {
             scanf("%d%d%d",&x,&y,&val);
-            tree.insert(1, x, y ,val);
+            tree.insert(x, y ,val);
         }
         else
         {
             scanf("%d%d",&x,&y);
-            printf("%d\n", tree.query(1, x, y));
+            printf("%d\n", tree.query(x, y));
         }
     }
 

@@ -72,20 +72,25 @@ struct SegTree
     Node a[maxn<<2];
     inline int Mid(int rt){ return a[rt].L + (a[rt].R - a[rt].L)/2; }
 
-    inline int Length(int rt){ return a[rt].R - a[rt].L + 1; }
+    inline int Len(int rt){ return a[rt].R - a[rt].L + 1; }
 
     void build(int L, int R, int rt=1)
     {
         a[rt].L = L;
         a[rt].R = R;
         a[rt].sum = a[rt].lazy_add = a[rt].lazy_set = 0;
-        if(L == R) return ;
+        if(L == R)
+        {
+            scanf("%d", &a[rt].sum);
+            return ;
+        } 
         int mid = Mid(rt);
         build(L, mid, rt<<1);
         build(mid+1, R, rt<<1|1);
+        push_up(rt);
     }
 
-    void push_up(int rt){ a[rt].sum = a[rt<<1].sum + a[rt<<1|1].sum; }
+    inline void push_up(int rt){ a[rt].sum = a[rt<<1].sum + a[rt<<1|1].sum; }
 
     /*
     push down 操作中，set操作可以覆盖子结点的add操作，但时不能覆盖当前结点的add操作，
@@ -105,8 +110,8 @@ struct SegTree
         if(a[rt].lazy_set)
         {
             a[lc].lazy_set = a[rc].lazy_set = a[rt].lazy_set;
-            a[lc].sum = Length(lc) * a[lc].lazy_set;
-            a[rc].sum = Length(rc) * a[rc].lazy_set;
+            a[lc].sum = Len(lc) * a[lc].lazy_set;
+            a[rc].sum = Len(rc) * a[rc].lazy_set;
             //设置标记可以覆盖增减标记
             a[lc].lazy_add = a[rc].lazy_add = 0;
             //消除父结点的懒惰设置标记
@@ -116,66 +121,50 @@ struct SegTree
         {
             a[lc].lazy_add += a[rt].lazy_add;
             a[rc].lazy_add += a[rt].lazy_add;
-            a[lc].sum += Length(lc) * a[rt].lazy_add;
-            a[rc].sum += Length(rc) * a[rt].lazy_add;
+            a[lc].sum += Len(lc) * a[rt].lazy_add;
+            a[rc].sum += Len(rc) * a[rt].lazy_add;
             //消除父结点的懒惰增减标记
             a[rt].lazy_add = 0;
         }
     }
 
-    void set(int L, int R, int val, int rt=1)
+    void update(int L, int R, int set, int add ,int rt=1)
     {
-        // if(debug) printf("set: L=%d  R=%d val=%d rt=%d\n",L,R,val, rt);
         push_down(rt);
-        if(a[rt].L == L && a[rt].R == R)
+        if(L <= a[rt].L && a[rt].R <= R)
         {
-            a[rt].sum = Length(rt) * val;
-            a[rt].lazy_set = val;
-            a[rt].lazy_add = 0;
+            if(add)
+            {
+                a[rt].sum += Len(rt) * add;
+                a[rt].lazy_add += add;
+            }
+            if(set)
+            {
+                a[rt].sum = Len(rt) * set;
+                a[rt].lazy_set = set;
+                a[rt].lazy_add = 0; //有设置标记的时候,增减标记失效
+            }
             return;
         }
-
-        int mid = Mid(rt), lc=rt<<1, rc=lc+1;
-        if(R <= mid ) set(L, R, val, lc);
-        else if(mid < L) set(L, R, val, rc);
+        int mid = Mid(rt);
+        if(R <= mid ) update(L, R, set, add, rt<<1 );
+        else if(mid < L) update(L ,R , set, add, rt<<1|1);
         else
         {
-            set(L, mid, val, lc);
-            set(mid+1, R, val, rc);
+            update(L, R, set, add, rt<<1);
+            update(L, R, set, add, rt<<1|1);
         }
         push_up(rt);
     }
-
-    void add(int L, int R, int val, int rt=1)
-    {
-        // if(debug) printf("add: L=%d  R=%d val=%d rt=%d\n",L,R,val,rt);
-        push_down(rt);
-        if(a[rt].L == L && a[rt].R == R)
-        {
-            a[rt].sum += Length(rt) * val;
-            a[rt].lazy_add += val;
-            return;
-        }
-        int mid = Mid(rt), lc=rt<<1, rc=lc+1;
-        if(R <= mid ) add(L, R, val, lc);
-        else if(mid < L) add(L, R, val, rc);
-        else
-        {
-            add(L, mid, val, lc);
-            add(mid+1, R, val, rc);
-        }
-        push_up(rt);
-    }
-
 
     int query(int L,int R,int rt=1)
     {
         push_down(rt);
-        if(a[rt].L == L && a[rt].R == R) return a[rt].sum;
+        if( L <= a[rt].L && a[rt].R <= R) return a[rt].sum;
         int mid = Mid(rt);
         if(R <= mid) return query(L, R, rt<<1);
         else if(mid < L) return query(L,R, rt<<1|1);
-        else return query(L, mid, rt<<1) + query(mid+1, R, rt<<1|1);
+        else return query(L, R, rt<<1) + query(L, R, rt<<1|1);
     }
 
     void dfs(int rt=1)
@@ -201,19 +190,12 @@ freopen("in.txt","r",stdin);
     int N, M, val;
     int op, L, R;
     scanf("%d%d",&N,&M);
-    tree.build(0,N);
-    for(int i=0; i<=N; ++i)
-    {
-        scanf("%d", &val);
-        tree.set(i,i,val);
-    }
-    // debug = 1;
-    // if(debug) tree.dfs();
-
+    tree.build(0, N);
+    
     while(M--)
     {
         scanf("%d%d%d%d", &op, &L, &R, &val);
-        op == 1? tree.set(L,R,val) : tree.add(L,R,val);
+        op == 1? tree.update(L,R, val, 0) : tree.update(L,R, 0, val);
         printf("%d\n", tree.query(0,N));
     }
 

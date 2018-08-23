@@ -156,25 +156,20 @@ LL ext_gcd(LL a, LL b, LL &x, LL &y)
 
 LL chain_remain(int n)
 {
-    LL M = m[0], R=r[0], k1, k2, x;
+    LL M = m[0], R=r[0], k1, k2;
     for(int i=1; i<n; ++i)
     {
         LL d = gcd(M, m[i]);
         LL c = r[i] - R;
         if(c % d) return -1; //无解
         ext_gcd(M/d, m[i]/d, k1, k2);
-        k1 *= c/d; //的原方程的解
+        k1 *= c/d; //原方程的解
         LL T = m[i] / d;
-        k1 = (k1 % T + T) % T;  //将k1化为最小正整数解
-        x = M * k1 + R;  //x = m[1] * k1 + r[1]
-        // printf("x=%d\n",x);
-        R = x; 
+        k1 = (k1 % T + T) % T;  //将k1调整为最小正整数解
+        R = M * k1 + R;  //R = m[1] * k1 + r[1]
         M = M / d * m[i]; // M = lcm(M, m[i]) = M * m[i] / gcd(M, m[i])
-        R %= M;
     }
-
-    if(x < 0) x += M; return x;
-    // if(R < 0) R += M; return R; 
+    return R;
 }
 
 int main()
